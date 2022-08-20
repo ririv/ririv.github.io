@@ -160,6 +160,3 @@ Few-shot Relation Classification 小样本关系分类
 
 ![[Pasted image 20220720030442.png]]
 
-## 其他笔记参考
-[2020-12-27_wl_dew的博客-CSDN博客](https://blog.csdn.net/wl_dew/article/details/111798799)
-
