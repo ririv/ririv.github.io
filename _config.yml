@@ -1,4 +1,9 @@
 theme: jekyll-theme-cayman
 markdown: kramdown
 kramdown:
-  gfm_quirks: [paragraph_end]
+  input: Kramdown
+  syntax_highlighter: coderay
+  syntax_highlighter_opts:
+  line_numbers: table
+  bold_every: 5
+math_engine: mathjax
