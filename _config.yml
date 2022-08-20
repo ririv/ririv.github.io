@@ -1,2 +1,4 @@
 theme: jekyll-theme-cayman
 markdown: kramdown
+kramdown:
+  gfm_quirks: [paragraph_end]
