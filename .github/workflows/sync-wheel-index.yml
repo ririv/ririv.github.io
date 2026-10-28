@@ -39,9 +39,7 @@ jobs:
             --destination android-wheels \
             --wheel-repository ririv/py-extra-wheels \
             --revision "$(git -C .index-source rev-parse HEAD)"
-      - name: Commit changed index and request Pages build
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Commit changed index
         run: |
           git add -- android-wheels
           if git diff --cached --quiet; then
@@ -52,5 +50,22 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git commit -m '同步兼容 Python wheel 索引'
           git push origin HEAD:main
+      - name: Ensure current site revision is published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          BUILD_STATE=$(gh api "repos/$GITHUB_REPOSITORY/pages/builds/latest" --jq '[.commit, .status] | @tsv')
+          read -r BUILD_COMMIT BUILD_STATUS <<< "$BUILD_STATE"
+          case "$BUILD_STATUS" in
+            built|building|queued)
+              if [ "$BUILD_COMMIT" = "$CURRENT_COMMIT" ]; then
+                echo "当前提交已发布或正在发布"
+                exit 0
+              fi
+              ;;
+            errored) ;;
+            *) echo "未知 Pages 构建状态：$BUILD_STATUS"; exit 1 ;;
+          esac
           # GITHUB_TOKEN 推送不会自动触发 Pages，必须显式请求构建。
           gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent
