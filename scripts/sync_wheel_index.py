@@ -1,6 +1,7 @@
 """Validate and mirror a Python simple index into a compatibility path."""
 
 import argparse
+import json
 import re
 import shutil
 import tempfile
@@ -56,11 +57,13 @@ def collect_index_files(source: Path, wheel_repository: str) -> list[Path]:
 
 
 def sync_index(
-    source: Path, destination: Path, wheel_repository: str, revision: str
+    source: Path, destination: Path, wheel_repository: str, revision: str, tree: str
 ) -> None:
     """Replace only the compatibility subtree after validating the complete source."""
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise ValueError(f"必须提供上游的完整提交 SHA：{revision}")
+    if not re.fullmatch(r"[0-9a-f]{40}", tree):
+        raise ValueError("必须提供上游的完整 Git 树 SHA")
     files = collect_index_files(source, wheel_repository)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(
@@ -73,6 +76,7 @@ def sync_index(
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / relative, target)
         (staged / "sync-revision.txt").write_text(revision + "\n", encoding="utf-8")
+        (staged / "sync-state.json").write_text(json.dumps({"tree": tree}) + "\n", encoding="utf-8")
         if destination.exists():
             shutil.rmtree(destination)
         staged.replace(destination)
@@ -85,8 +89,9 @@ def main() -> None:
     parser.add_argument("--destination", required=True, type=Path)
     parser.add_argument("--wheel-repository", required=True)
     parser.add_argument("--revision", required=True)
+    parser.add_argument("--tree", required=True)
     args = parser.parse_args()
-    sync_index(args.source, args.destination, args.wheel_repository, args.revision)
+    sync_index(args.source, args.destination, args.wheel_repository, args.revision, args.tree)
 
 
 if __name__ == "__main__":

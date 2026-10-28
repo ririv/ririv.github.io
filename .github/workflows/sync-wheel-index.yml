@@ -36,7 +36,8 @@ jobs:
             --source .index-source \
             --destination android-wheels \
             --wheel-repository ririv/py-extra-wheels \
-            --revision "$(git -C .index-source rev-parse HEAD)"
+            --revision "$(git -C .index-source rev-parse HEAD)" \
+            --tree "$(git -C .index-source rev-parse HEAD^{tree})"
       - name: Commit changed index
         run: |
           git add -- android-wheels
