@@ -1,0 +1,56 @@
+name: Sync legacy Python wheel index
+
+on:
+  schedule:
+    - cron: '11,26,41,56 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: legacy-wheel-index-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout user site
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test compatibility index sync
+        run: python -B -m unittest discover -s tests -v
+      - name: Checkout published wheel index
+        uses: actions/checkout@v4
+        with:
+          repository: ririv/py-extra-wheels
+          ref: gh-pages
+          path: .index-source
+          persist-credentials: false
+      - name: Synchronize compatibility index
+        run: |
+          python -B scripts/sync_wheel_index.py \
+            --source .index-source \
+            --destination android-wheels \
+            --wheel-repository ririv/py-extra-wheels \
+            --revision "$(git -C .index-source rev-parse HEAD)"
+      - name: Commit changed index and request Pages build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add -- android-wheels
+          if git diff --cached --quiet; then
+            echo "索引没有变化"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git commit -m '同步兼容 Python wheel 索引'
+          git push origin HEAD:main
+          # GITHUB_TOKEN 推送不会自动触发 Pages，必须显式请求构建。
+          gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --silent
